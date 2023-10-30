@@ -6,6 +6,7 @@ This repository contains the smart contracts for the NUT and esNUT tokens, desig
 
 1. [Introduction](#introduction)
 2. [Installation](#installation)
+    - [Patch EIP712.sol](#patch)
 3. [Contract Overview](#contract-overview)
     - [NUT](#nut)
     - [esNUT](#esnut)
@@ -24,7 +25,21 @@ This repository contains the smart contracts for the NUT and esNUT tokens, desig
 ```bash
 git clone https://github.com/ezoia-com/nut
 cd nut
+mkdir node_modules
+npm install @openzeppelin/contracts@4.9.0 --save
 ```
+
+### Patch
+Using ShortStrings for *;" triggers a bug in Brownie. This can be solved by expliciting the the using in node_modules/@openzeppelin/contracts/utils/cryptography/EIP712.sol
+
+Replace
+
+    using ShortStrings for *;
+  
+   to
+    
+    using ShortStrings for string;
+    using ShortStrings for ShortString;
 
 ## Contract Overview
 

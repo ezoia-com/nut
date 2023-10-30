@@ -2,12 +2,15 @@
 pragma solidity 0.8.19;
 
 import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 import "../node_modules/@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "./NUT.sol";
 
 contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
+  using SafeERC20 for ERC20;
+  
   NUT private immutable nutToken;
   bool public tokenLocked; 
  
@@ -23,11 +26,10 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
   {
     nutToken = NUT(_nutToken);
     tokenLocked = true;
-
     _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-    _setupRole(TRANSFER_ROLE, _msgSender());
-    _setupRole(MINTER_ROLE, _msgSender());
   }
+  
+  
 
   // The functions below are overrides required by Solidity.
   function _afterTokenTransfer(address from, address to, uint256 amount)
@@ -81,4 +83,16 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
   function setTokenLock(bool _tokenLocked) external onlyRole(DEFAULT_ADMIN_ROLE) {
     tokenLocked = _tokenLocked;
   }
+  
+  /// @notice ERC20 rescue
+  function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ERC20(tokenAddress).safeTransfer(target, amount);
+  }
+  
+  /// @notice Rescue esNUT 
+  function rescue(address from) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    _approve(from, address(this), type(uint256).max);
+    transferFrom(from, address(this), balanceOf(from));
+  }
+  
 }
