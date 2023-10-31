@@ -4,32 +4,43 @@ pragma solidity ^0.8.19;
 import "../../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../../node_modules/@openzeppelin/contracts/access/AccessControl.sol";
-import "../esNUT.sol"; // Assuming you have an esNUT.sol that contains the esNUT contract
+import "../esNUT.sol";
 
+/**
+ * @title ScheduledVesting
+ * @dev This contract handles the vesting schedules for esNUT tokens.
+ * @notice Users with a vesting schedule can claim their vested esNUT tokens based on predetermined schedules.
+ */
 contract ScheduledVesting is AccessControl {
     using SafeERC20 for ERC20;
     
+    /// @dev Struct for holding the vesting schedule for a user.
     struct VestingSchedule {
-        uint256 timestampAvailable;
-        uint256 amount;
+        uint256 timestampAvailable;  // Timestamp when the tokens become available
+        uint256 amount;              // Amount of tokens to unlock
     }
-
-    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     mapping(address => VestingSchedule[]) public schedules;
 
-    esNUT private esnutToken;
-    NUT private nutToken; // Assuming you have a corresponding NUT token implementation
+    esNUT public esnutToken;
 
     event ScheduledUnlock(address indexed account, uint256 amount);
 
-    constructor(address _esnutToken, address _nutToken) {
+    /**
+     * @dev Constructor to set the initial configuration.
+     * @param _esnutToken Address of the esNUT token contract.
+     */
+    constructor(address _esnutToken) {
         esnutToken = esNUT(_esnutToken);
-        nutToken = NUT(_nutToken);
-        
-        _setupRole(ADMIN_ROLE, _msgSender());
+        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    function setSchedule(address account, VestingSchedule[] calldata newSchedule) external onlyRole(ADMIN_ROLE) {
+    /**
+     * @notice Sets the vesting schedule for a given account.
+     * @dev Can only be called by an account with the DEFAULT_ADMIN_ROLE.
+     * @param account Address of the user.
+     * @param newSchedule Array of VestingSchedule struct detailing the vesting schedule.
+     */
+    function setSchedule(address account, VestingSchedule[] calldata newSchedule) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(newSchedule.length > 0, "ScheduledVesting: Schedule length must be greater than 0");
                  
         // Check that the schedule is in timestamp-sequential order
@@ -37,22 +48,22 @@ contract ScheduledVesting is AccessControl {
             require(newSchedule[i].timestampAvailable < newSchedule[i+1].timestampAvailable, "ScheduledVesting: Schedule timestamps must be in sequential order");
         }
         
-        // Check schedule and vest accordingly
+        // Vest tokens according to existing schedule before updating
         vestTokens(account);
       
-        // Clear the current schedule for the account
+        // Clear and update the schedule
         delete schedules[account];
-   
-        // Resize the storage array
-        delete schedules[account];
-    
-        // Manually copy each element
         for (uint256 i = 0; i < newSchedule.length; i++) {
-            schedules[account].push( newSchedule[i] );
+            schedules[account].push(newSchedule[i]);
         }
     }
 
-    function cancelSchedule(address account) external onlyRole(ADMIN_ROLE) {
+    /**
+     * @notice Cancels the vesting schedule for a given account and immediately unlocks any vested tokens.
+     * @dev Can only be called by an account with the ADMIN_ROLE.
+     * @param account Address of the user.
+     */
+    function cancelSchedule(address account) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(schedules[account].length > 0, "ScheduledVesting: No schedule set for account");
 
         // Fulfill existing schedule
@@ -65,6 +76,11 @@ contract ScheduledVesting is AccessControl {
         delete schedules[account];
     }
 
+    /**
+     * @notice Allows a user to claim their vested tokens based on their schedule.
+     * @param account Address of the user.
+     * @return totalVested The total number of tokens that were vested.
+     */
     function vestTokens(address account) public returns (uint256 totalVested) {
         VestingSchedule[] storage userSchedule = schedules[account];
         for (uint256 i = 0; i < userSchedule.length; i++) {
@@ -73,12 +89,19 @@ contract ScheduledVesting is AccessControl {
                 userSchedule[i].amount = 0; // Mark as vested
             }
         }
-        esnutToken.unlock(msg.sender, totalVested);
-        emit ScheduledUnlock(msg.sender, totalVested);
+        if (totalVested > 0) {
+          esnutToken.unlock(account, totalVested);
+          emit ScheduledUnlock(account, totalVested);
+        }
     }
 
-    /// @notice ERC20 rescue
-    function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(ADMIN_ROLE) {
+    /**
+     * @notice Allows the ADMIN_ROLE to rescue any ERC20 tokens sent to the contract by mistake.
+     * @param tokenAddress Address of the token contract.
+     * @param target Address to send the tokens to.
+     * @param amount Amount of tokens to send.
+     */
+    function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
 }
