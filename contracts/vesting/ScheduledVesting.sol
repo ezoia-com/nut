@@ -67,11 +67,7 @@ contract ScheduledVesting is AccessControl {
         require(schedules[account].length > 0, "ScheduledVesting: No schedule set for account");
 
         // Fulfill existing schedule
-        for (uint256 i = 0; i < schedules[account].length; i++) {
-            if (block.timestamp >= schedules[account][i].timestampAvailable) {
-                esnutToken.unlock(account, schedules[account][i].amount);
-            }
-        }
+        vestTokens(account);
 
         delete schedules[account];
     }

@@ -136,16 +136,17 @@ contract LinearVesting is AccessControl {
 
         uint256 elapsedTime = block.timestamp - vestingInfo.startTimestamp;
         if (elapsedTime >= VESTING_DURATION) {
-            esnutToken.unlock(msg.sender, vestingInfo.esnutDeposited - vestingInfo.esnutCollected);
+            claimableAmount = vestingInfo.esnutDeposited - vestingInfo.esnutCollected;
             delete vestingSchedules[msg.sender];
         } else {
             uint256 vestedAmount = (elapsedTime * vestingInfo.esnutDeposited) / VESTING_DURATION;
             claimableAmount = vestedAmount - vestingInfo.esnutCollected;
-            esnutToken.unlock(address(this), claimableAmount);
-            nutToken.transfer(msg.sender, claimableAmount);
             vestingInfo.esnutCollected += uint96(claimableAmount);
         }
-        
+
+        esnutToken.unlock(address(this), claimableAmount);
+        nutToken.transfer(msg.sender, claimableAmount);
+                
         emit LinearUnlocked(msg.sender, claimableAmount);
     }
 

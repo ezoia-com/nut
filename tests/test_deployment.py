@@ -7,7 +7,6 @@ from brownie import NUT, esNUT, accounts, ScheduledVesting, LinearVesting, chain
 def isolation(fn_isolation):
     pass
 
-
 def test_deployment():
     # Initial deployment of the NUT contract
     nut = NUT.deploy({'from': accounts[0]})
@@ -322,7 +321,7 @@ def test_linear_vesting():
     # Trying to start vesting immediately should fail due to the lock
     with brownie.reverts("LinearVesting: Insufficient esNUT locked"): 
       linear_vesting.startVesting(1e26, {'from': accounts[2]})
-
+     
     # Sleep for 10 days and try again. It should still fail.
     brownie.chain.sleep(60 * 60 * 24 * 10)
     with brownie.reverts("LinearVesting: Insufficient esNUT locked"):
@@ -345,3 +344,123 @@ def test_linear_vesting():
     
     lock_info = linear_vesting.lockSchedules(accounts[1])
     assert lock_info[1] == future_timestamp, "Lock end time override failed"
+    
+def test_scheduled_vesting_non_sequential_schedule():
+    # Deploy the NUT and esNUT contracts
+    nut = NUT.deploy({'from': accounts[0]})
+    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
+
+    scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
+
+    # Try to set a non-sequential schedule for accounts[1]
+    non_sequential_schedule = [
+        (brownie.chain.time() + 60 * 60 * 48, 1e25),  # 2 days from now
+        (brownie.chain.time() + 60 * 60 * 24, 1e25)   # 1 day from now (out of order)
+    ]
+
+    with brownie.reverts("ScheduledVesting: Schedule timestamps must be in sequential order"):
+        scheduled_vesting.setSchedule(accounts[1], non_sequential_schedule, {'from': accounts[0]})
+
+
+def test_rescue_erc20():
+    # Deploy the NUT and esNUT contracts
+    nut = NUT.deploy({'from': accounts[0]})
+    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
+
+    scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
+
+    # Mistakenly send esNUT to the ScheduledVesting contract
+    esnut.transfer(scheduled_vesting.address, 1e25, {"from": accounts[0]})
+    assert esnut.balanceOf(scheduled_vesting.address) == 1e25
+
+    # Use rescueERC20 to recover the esNUT tokens
+    scheduled_vesting.rescueERC20(esnut.address, accounts[0], 1e25, {'from': accounts[0]})
+    assert esnut.balanceOf(scheduled_vesting.address) == 0
+    assert esnut.balanceOf(accounts[0]) == 1e28 # original balance 
+
+    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+
+    # Mistakenly send esNUT to the LinearVesting contract
+    esnut.transfer(linear_vesting.address, 1e25, {"from": accounts[0]})
+    assert esnut.balanceOf(linear_vesting.address) == 1e25
+
+    # Use rescueERC20 to recover the esNUT tokens
+    linear_vesting.rescueERC20(esnut.address, accounts[0], 1e25, {'from': accounts[0]})
+    assert esnut.balanceOf(linear_vesting.address) == 0
+    assert esnut.balanceOf(accounts[0]) == 1e28 # original balance 
+
+def test_linear_vesting_additional():
+    # Setup common variables
+    nut = NUT.deploy({'from': accounts[0]})
+    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
+    
+    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    esnut.grantRole(esnut.UNLOCK_ROLE(), linear_vesting, {"from": accounts[0]})
+    esnut.grantRole(esnut.TRANSFER_ROLE(), linear_vesting, {"from": accounts[0]})
+
+    # 1. startVesting with insufficient esNUT
+    with brownie.reverts("LinearVesting: Insufficient esNUT balance"):
+        linear_vesting.startVesting(1e20, {'from': accounts[1]})
+    
+    # 2. startVesting with Lock condition
+    esnut.transfer(accounts[1], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[1]})
+    linear_vesting.lock(1e6, 1e20, {'from': accounts[1]})
+    with brownie.reverts("LinearVesting: Insufficient esNUT locked"):
+        linear_vesting.startVesting(1e20, {'from': accounts[1]})
+
+    # 2b. Lock again to extend lock
+    linear_vesting.lock(1e6, 1e20, {'from': accounts[1]}) 
+
+    # 3. claimVestedToken after the entire vesting duration
+    esnut.transfer(accounts[2], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[2]})
+    linear_vesting.startVesting(1e20, {'from': accounts[2]})
+    brownie.chain.sleep(90 * 24 * 60 * 60 + 1)  # Sleep for 90 days + 1 second
+    linear_vesting.claimVestedTokens({'from': accounts[2]})
+    assert nut.balanceOf(accounts[2]) == 1e20, "claim after vesting period failed"
+
+    # 4. lock with insufficient esNUT
+    with brownie.reverts("LinearVesting: Insufficient esNUT balance"):
+        linear_vesting.lock(1e6, 1e20, {'from': accounts[3]})
+    
+    # 5. lock after admin sets overrideLockEndTime
+    esnut.transfer(accounts[3], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[3]})
+    linear_vesting.overrideLockEndTime(accounts[3], brownie.chain.time() + 1e6, 1e20, {'from': accounts[0]})
+    with brownie.reverts("LinearVesting: Account Ineligible for Locking"):
+        linear_vesting.lock(1e6, 1e20, {'from': accounts[3]})
+    
+    # 6. earlyWithdraw after the entire vesting duration
+    esnut.transfer(accounts[4], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[4]})
+    linear_vesting.startVesting(1e20, {'from': accounts[4]})
+    brownie.chain.sleep(90 * 24 * 60 * 60 + 1)  # Sleep for 90 days + 1 second
+    with brownie.reverts("LinearVesting: Vesting complete, no early withdrawal available"):
+        linear_vesting.earlyWithdraw({'from': accounts[4]})
+    
+    # 7. earlyWithdraw after 67.5 days   
+    esnut.transfer(accounts[5], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[5]})
+    linear_vesting.startVesting(1e20, {'from': accounts[5]})
+    brownie.chain.sleep(70 * 24 * 60 * 60)  # Sleep for 70 days (linear penalty should be less than floor penalty of 25%) 
+    linear_vesting.earlyWithdraw({'from': accounts[5]})
+
+    # 8. overrideLockEndTime with a past timestamp
+    with brownie.reverts("LinearVesting: Timestamp should be in the future"):
+        linear_vesting.overrideLockEndTime(accounts[6], brownie.chain.time() - 1e6, 1e20, {'from': accounts[0]})
+    
+    # 9. cancelVesting without a schedule
+    with brownie.reverts("LinearVesting: No Vesting In Progress"):
+        linear_vesting.cancelVesting({'from': accounts[7]})
+    
+    # 10. cancelVesting with a schedule
+    esnut.transfer(accounts[8], 1e20, {"from": accounts[0]})
+    esnut.approve(linear_vesting, 1e20, {'from': accounts[8]})
+    linear_vesting.startVesting(1e20, {'from': accounts[8]})
+    linear_vesting.cancelVesting({'from': accounts[8]})
+    assert esnut.balanceOf(accounts[8]) == 1e20, "cancelVesting failed"
+

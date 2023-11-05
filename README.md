@@ -1,5 +1,6 @@
 
 
+
 # NUT & esNUT Token Contracts
 
 This repository contains the smart contracts for the NUT and esNUT tokens, designed for governance and vesting purposes.
@@ -116,19 +117,19 @@ Perform coverage with:
 brownie test --network mainnet-fork --coverage
 ```
 
-Current coverage:
+Current coverage (hiding OpenZeppelin's contracts):
 
-      contract: LinearVesting
-        LinearVesting.startVesting - 83.3%
-        LinearVesting.claimVestedTokens - 75.0%
-        LinearVesting.lock - 75.0%
-        LinearVesting.overrideLockEndTime - 75.0%
-        LinearVesting.earlyWithdraw - 70.5%
+      contract: LinearVesting - 67.4%
+        LinearVesting.claimVestedTokens - 100.0%
+        LinearVesting.earlyWithdraw - 100.0%
+        LinearVesting.lock - 100.0%
+        LinearVesting.overrideLockEndTime - 100.0%
+        LinearVesting.startVesting - 100.0%
     
-      contract: ScheduledVesting
+      contract: ScheduledVesting - 50.7%
+        ScheduledVesting.setSchedule - 100.0%
         ScheduledVesting.vestTokens - 100.0%
-        ScheduledVesting.setSchedule - 87.5%
-        ScheduledVesting.cancelSchedule - 62.5%
+
 
 
 ## Security
