@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: none
+// SPDX-License-Identifier: None
 pragma solidity 0.8.19;
 
 import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -41,7 +41,6 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
         tokenLocked = true;  // Transfer is locked by default
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(TRANSFER_ROLE, msg.sender);
-        _mint(msg.sender, 1e28);
     }
 
     // Overrides for ERC20Votes
@@ -86,6 +85,24 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
         require(nutToken.totalSupply() + totalSupply() <= nutToken.cap(), "esNUT: NUT + esNUT invariant breached");
     }
 
+    /**
+     * @notice Allows admin role accounts to mint esNUT - this is likely deployer and eventually governance
+     * @param to Address to mint to
+     * @param amount Amount of esNUT to mint
+     */   
+    function mint(address to, uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) checkInvariantAfter {        
+        _mint(to, amount);
+    }
+    
+    /**
+     * @notice Allows admin role accounts to burn esNUT - this is likely deployer and eventually governance
+     * @param from Address to burn from
+     * @param amount Amount of esNUT to burn
+     */
+    function burn(address from, uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _burn(from, amount);
+    }
+    
     /**
      * @notice Allows specified accounts to unlock esNUT into NUT
      * @param account Address of the account unlocking their esNUT

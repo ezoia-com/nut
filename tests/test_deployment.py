@@ -17,7 +17,9 @@ def test_deployment():
     
     # Initial deployment of the esNUT contract
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
-    assert esnut.totalSupply() == 1e28, "Initial esNUT supply is not 1e28"
+    assert esnut.totalSupply() == 0, "Initial esNUT supply is not 0"
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
+    assert esnut.totalSupply() == 1e28, "Minted esNUT supply is not 1e28"
     assert esnut.tokenLocked() == True, "esNUT transfers are not locked upon deployment"
     assert esnut.hasRole(esnut.DEFAULT_ADMIN_ROLE(), accounts[0]), "Deployer doesn't have DEFAULT_ADMIN_ROLE in esNUT"
     
@@ -75,6 +77,7 @@ def test_esnut_basic_functionality():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
     
     # Distribute some esNUT to accounts[1]
@@ -109,6 +112,7 @@ def test_emergency_pause():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
     
     # Grant PAUSER role to a specific account for simulation purposes
@@ -171,6 +175,7 @@ def test_scheduled_vesting():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
 
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
@@ -265,6 +270,7 @@ def test_linear_vesting():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
     
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
@@ -349,6 +355,7 @@ def test_scheduled_vesting_non_sequential_schedule():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
 
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
@@ -367,6 +374,7 @@ def test_rescue_erc20():
     # Deploy the NUT and esNUT contracts
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
 
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
@@ -395,6 +403,7 @@ def test_linear_vesting_additional():
     # Setup common variables
     nut = NUT.deploy({'from': accounts[0]})
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
     
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
