@@ -412,8 +412,10 @@ def test_linear_vesting_additional():
     with brownie.reverts("LinearVesting: Insufficient esNUT locked"):
         linear_vesting.startVesting(1e20, {'from': accounts[1]})
 
-    # 2b. Lock again to extend lock
-    linear_vesting.lock(1e6, 1e20, {'from': accounts[1]}) 
+    # 2b. Lock again to extend lock, ensure new expiry must be later than existing lock
+    with brownie.reverts("LinearVesting: Lock extension duration insufficient"):
+        linear_vesting.lock(1, 1e20, {'from': accounts[1]})
+    linear_vesting.lock(1e6 + 1, 1e20, {'from': accounts[1]}) 
 
     # 3. claimVestedToken after the entire vesting duration
     esnut.transfer(accounts[2], 1e20, {"from": accounts[0]})

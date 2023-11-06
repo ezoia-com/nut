@@ -165,9 +165,13 @@ contract LinearVesting is AccessControl {
         if (lockInfo.lockDuration == 0) {
             require(block.timestamp > lockInfo.lockedUntilTimestamp, "LinearVesting: Account Ineligible for Locking");
         }
+
+        uint64 newLockTime = uint64(block.timestamp + duration);
+
+        require(newLockTime > lockInfo.lockedUntilTimestamp, "LinearVesting: Lock extension duration insufficient");
         
         lockInfo.lockDuration = uint64(duration);
-        lockInfo.lockedUntilTimestamp = uint64(block.timestamp + duration);
+        lockInfo.lockedUntilTimestamp = newLockTime;
         lockInfo.esnutLocked = uint128(amount);
         
         emit StartVestingLock(msg.sender, duration, block.timestamp + duration, amount);
