@@ -25,12 +25,16 @@ contract LinearVesting is AccessControl {
     // Duration over which esNUT tokens vest linearly into NUT
     uint256 public constant VESTING_DURATION = 90 days;
 
+    // Floor penalty for early unvest
+    uint256 public minPenalty = 0.3e18;
+
     event StartLinearUnlock(address indexed account, uint256 startTime, uint256 depositedAmount);
     event CancelLinearUnlock(address indexed account, uint256 returnedAmount);
     event EarlyLinearUnlock(address indexed account, uint256 returnedAmount, uint256 penaltyAmount);
     event LinearUnlocked(address indexed account, uint256 unlockedAmount);
     event FeeCollectorChanged(address from, address to);
     event StartVestingLock(address indexed account, uint256 duration, uint256 endTime, uint256 amountLocked);
+    event MinPenaltyChanged(uint256 oldMinPenalty, uint256 newMinPenalty);
     
     /**
      * @notice Struct to keep track of a user's vesting details.
@@ -188,10 +192,10 @@ contract LinearVesting is AccessControl {
         require(vestingInfo.startTimestamp + VESTING_DURATION > block.timestamp, "LinearVesting: Vesting complete, no early withdrawal available");
         claimVestedTokens();
         
-        // Penalty is linear from 100% to 0% over the VESTING_DURATION, with a minimum of 25% penalty
+        // Penalty is linear from 100% to 0% over the VESTING_DURATION, with a minimum of minPenalty% penalty
         uint256 elapsedTime = block.timestamp - vestingInfo.startTimestamp;
-        uint256 penaltyPercentage = 1e18 - elapsedTime * 1e18 / VESTING_DURATION ;
-        if (penaltyPercentage < 0.25e18) penaltyPercentage = 0.25e18;
+        uint256 penaltyPercentage = 1e18 - elapsedTime * 1e18 / VESTING_DURATION;
+        if (penaltyPercentage < minPenalty) penaltyPercentage = minPenalty;
         
         uint256 esnutRemaining = vestingInfo.esnutDeposited - vestingInfo.esnutCollected;
         penaltyAmount = penaltyPercentage * esnutRemaining / 1e18;
@@ -231,6 +235,17 @@ contract LinearVesting is AccessControl {
         emit FeeCollectorChanged(feeCollector, _feeCollector);
         feeCollector = _feeCollector;
     }
+    
+    /**
+     * @notice Allows ADMIN to set the min penalty
+     * @param _minPenalty Minimum penalty between 0e18 and 1e18, representing 0 to 100%
+     */
+    function setMinPenalty(uint256 _minPenalty) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_minPenalty <= 1e18, "LinearVesting: minPenalty cannot exceed 1e18 (100%)");
+        emit MinPenaltyChanged(minPenalty, _minPenalty);
+        minPenalty = _minPenalty;
+    }
+     
        
     /**
      * @notice Allows ADMIN to rescue ERC20 tokens mistakenly sent to this contract

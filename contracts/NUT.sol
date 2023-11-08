@@ -66,13 +66,4 @@ contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
     function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
-    
-    /**
-     * @notice Rescues NUT tokens from any address, transferring them to this contract.
-     * Useful in case of accidental transfers or to retrieve esNUT from malicious actors.
-     * @param from The address from which esNUT tokens will be taken.
-     */
-    function rescue(address from) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _transfer(from, address(this), balanceOf(from));
-    } 
 }

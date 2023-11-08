@@ -475,3 +475,10 @@ def test_linear_vesting_additional():
     linear_vesting.cancelVesting({'from': accounts[8]})
     assert esnut.balanceOf(accounts[8]) == 1e20, "cancelVesting failed"
 
+    # 11. change minPenalty
+    with brownie.reverts("LinearVesting: minPenalty cannot exceed 1e18 (100%)"):
+      linear_vesting.setMinPenalty(2e18)
+    TARGET_PENALTY = 0.25e18
+    assert linear_vesting.minPenalty() != TARGET_PENALTY, "minPenalty pre-condition check failed"
+    linear_vesting.setMinPenalty(TARGET_PENALTY)
+    assert linear_vesting.minPenalty() == TARGET_PENALTY, "minPenalty setting failed" 

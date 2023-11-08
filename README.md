@@ -15,6 +15,7 @@ This repository contains the smart contracts for the NUT and esNUT tokens, desig
     - [esNUT](#esnut)
     - [LinearVesting](#linearvesting)
     - [ScheduledVesting](#scheduledvesting)
+    - [MerkleDistributor](#merkledistributor)
 4. [Usage](#usage)
 5. [Testing](#testing)
 6. [Coverage](#coverage)
@@ -73,14 +74,21 @@ https://docs.google.com/document/d/10FSR7hgw6R0Z9_8j8eEFnzeE2-2X2NtAdP-DM2Ybo6w/
 
  - This contract provides customized vesting schedules for each address. 
 
+### MerkleDistributor
+
+- This contract allows anyone to receive some quantities of a token if the claim is encoded in the Merkle tree, by providing the Merkle Proof
+
 ## Usage
 
 **NUT:**
 
+- `mint(address account, uint256 amount)`: Allows an account with the `MINTER_ROLE` to mint NUT tokens.
 - `burn(address account, uint256 amount)`: Allows an account with the `MINTER_ROLE` to burn NUT tokens.
 
 **esNUT:**
 
+- `mint(address to, uint256 amount)`: Allows account with DEFAULT_ADMIN_ROLE to mint esNUT to another account
+- `burn(uint256 amount)`: Allows account with DEFAULT_ADMIN_ROLE to burn esNUT in its account
 - `unlock(address account, uint unlockAmount)`: Converts esNUT to NUT for a specified account.
 - `lock(uint256 amount)`: Converts NUT to esNUT.
 - `setTokenLock(bool _tokenLocked)`: Toggles the transferability of esNUT.
@@ -93,12 +101,23 @@ https://docs.google.com/document/d/10FSR7hgw6R0Z9_8j8eEFnzeE2-2X2NtAdP-DM2Ybo6w/
 - `lock(uint256 duration, uint256 amount)`: Users can set a lock duration and amount, preventing them from vesting if there's an insufficient esNUT balance.
 - `earlyWithdraw()`: Users can withdraw their esNUT before the vesting period ends but will incur a penalty.
 - `overrideLockEndTime(uint256 timestamp, uint256 esnutLocked)`: The admin can set a future timestamp for an address, indicating that the address can't start vesting through this contract until that timestamp.
+- `setMinPenalty(uint256 _minPenalty)`: The admin can set a minimum penalty between 0 to 100%
 
 **ScheduledVesting:**
 - `setSchedule(address account, VestingSchedule[] memory newSchedule)`: Admins can set a unique vesting schedule for a user. The schedule is an array of timestamps and amounts.
 - `vestTokens()`: Allows a user to claim their NUT tokens based on the predetermined schedule set by the admin.
 - `cancelSchedule(address account)`: Admins can cancel a user's vesting schedule. On canceling, any vested tokens according to the existing schedule are first unlocked.
 
+**MerkleDistributor**
+
+-   `token() -> address`: Returns the address of the token that is being distributed by this contract.    
+-   `merkleRoot() -> bytes32`: Returns the Merkle root of the tree containing account balances available for claim.
+-   `isClaimed(uint256 index) -> bool`: Takes an `index` as an argument and returns `true` if the index has already been marked as claimed, and `false` otherwise.
+-   `claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof)`: Allows an account to claim a specified `amount` of the token if they provide a valid Merkle proof (`merkleProof`) that corresponds to the `index`, `account`, and `amount`.
+    -   **Note**: If the claim is valid, the tokens will be transferred to the `account`, and the index will be marked as claimed.
+    -   **Events**: Emits a `Claimed` event upon successful claim.
+-   `rescueERC20(address tokenAddress, address target)`: Allows **only the owner** of the contract to transfer the entirety of any ERC20 `tokenAddress`'s balance held by this contract to a specified `target` address.
+    -   **Note**: This function is primarily designed for distribution finalization or cancellation by transferring out the remaining tokens from the contract. 
 
 ## Testing
 
@@ -109,31 +128,44 @@ Run the tests with:
 ```bash
 brownie test --network mainnet-fork
 ```
+Example output
+
+	Brownie v1.19.3 - Python development framework for Ethereum
+	==================================================================================================== test session starts ====================================================================================================
+	platform linux -- Python 3.8.10, pytest-6.2.5, py-1.11.0, pluggy-1.0.0
+	rootdir: ~/thetanuts/nut
+	plugins: eth-brownie-1.19.3, anyio-3.6.2, xdist-1.34.0, forked-1.4.0, hypothesis-6.27.3, requests-mock-1.6.0, web3-5.31.3
+	collected 12 items
+
+	Launching 'ganache-cli --port 8545 --gasLimit 12000000 --accounts 10 --hardfork istanbul --mnemonic brownie'...
+
+	tests/test_deployment.py .........                                                                                                                                                                                    [ 75%]
+	tests/test_gov.py ..                                                                                                                                                                                                  [ 91%]
+	tests/test_merkle.py .                                                                                                                                                                                                
 
 ## Coverage
 
 Perform coverage with:
 ```bash	
-brownie test --network mainnet-fork --coverage
+brownie test --coverage
 ```
 
 Current coverage (hiding OpenZeppelin's contracts):
 
-      contract: LinearVesting - 67.4%
-        LinearVesting.claimVestedTokens - 100.0%
-        LinearVesting.earlyWithdraw - 100.0%
-        LinearVesting.lock - 100.0%
-        LinearVesting.overrideLockEndTime - 100.0%
-        LinearVesting.startVesting - 100.0%
-    
-      contract: ScheduledVesting - 50.7%
-        ScheduledVesting.setSchedule - 100.0%
-        ScheduledVesting.vestTokens - 100.0%
+	  contract: LinearVesting - 68.8%
+	    LinearVesting.claimVestedTokens - 100.0%
+	    LinearVesting.earlyWithdraw - 100.0%
+	    LinearVesting.lock - 100.0%
+	    LinearVesting.overrideLockEndTime - 100.0%
+	    LinearVesting.setMinPenalty - 100.0%
+	    LinearVesting.startVesting - 91.7%
 
+	  contract: ScheduledVesting - 50.7%
+	    ScheduledVesting.setSchedule - 100.0%
+	    ScheduledVesting.vestTokens - 100.0%
 
 
 ## Security
-
 - This code base has not yet been audited.
 
 ## License

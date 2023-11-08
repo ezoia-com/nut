@@ -96,11 +96,10 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     
     /**
      * @notice Allows admin role accounts to burn esNUT - this is likely deployer and eventually governance
-     * @param from Address to burn from
      * @param amount Amount of esNUT to burn
      */
-    function burn(address from, uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _burn(from, amount);
+    function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _burn(msg.sender, amount);
     }
     
     /**
@@ -141,14 +140,6 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
-    
-    /**
-     * @notice Transfers all esNUT tokens from a specified address to this contract.
-     * @dev Only callable by addresses with the DEFAULT_ADMIN_ROLE. Useful in case of mistakenly sent esNUT tokens.
-     * @param from The address from which esNUT tokens will be transferred.
-     */
-    function rescue(address from) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        _transfer(from, address(this), balanceOf(from));
-    } 
+
 
 }
