@@ -418,10 +418,12 @@ def test_rescue_erc20():
     esnut.transfer(linear_vesting.address, 1e25, {"from": accounts[0]})
     assert esnut.balanceOf(linear_vesting.address) == 1e25
 
-    # Use rescueERC20 to recover the esNUT tokens
-    linear_vesting.rescueERC20(esnut.address, accounts[0], 1e25, {'from': accounts[0]})
-    assert esnut.balanceOf(linear_vesting.address) == 0
-    assert esnut.balanceOf(accounts[0]) == 1e28 # original balance 
+    # Use rescueERC20 to recover the esNUT tokens - Cannot be done
+    with brownie.reverts("LinearVesting: Cannot rescue esNUT"):
+      linear_vesting.rescueERC20(esnut.address, accounts[0], 1e25, {'from': accounts[0]})
+
+    assert esnut.balanceOf(linear_vesting.address) == 1e25
+     
 
 def test_linear_vesting_additional():
     # Setup common variables
