@@ -254,7 +254,6 @@ contract LinearVesting is AccessControl {
      * @param amount The amount of tokens to rescue
      */
     function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(tokenAddress != esnutToken.address, "Cannot rescue esNUT");
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
 }
