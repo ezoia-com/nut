@@ -21,13 +21,15 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     NUT public immutable nutToken;
 
     // Indicates whether the token transfers are locked or unlocked
-    bool public tokenLocked; 
+    bool public tokenLocked;
  
     /// @notice Access role for addresses who are allowed to receive/transfer esNUT 
     bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
     /// @notice Access role for addresses who are allowed to unlock esNUT 
     bytes32 public constant UNLOCK_ROLE = keccak256("UNLOCK_ROLE");
+
+    event TokenLock(bool locked);
 
     /**
      * @notice Constructor for the esNUT token
@@ -43,6 +45,8 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
         nutToken.grantRole(nutToken.ADMIN_ROLE(), msg.sender);
         nutToken.grantRole(nutToken.MINTER_ROLE(), address(this));
         nutToken.renounceRole(nutToken.DEFAULT_ADMIN_ROLE(), address(this));
+
+        emit TokenLock(true);
     }
 
     // Overrides for ERC20Votes
@@ -130,6 +134,7 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
      */
     function setTokenLock(bool _tokenLocked) external onlyRole(DEFAULT_ADMIN_ROLE) {
         tokenLocked = _tokenLocked;
+        emit TokenLock(_tokenLocked);
     }
 
     /**
