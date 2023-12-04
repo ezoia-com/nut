@@ -75,6 +75,9 @@ contract LinearVesting is AccessControl {
         nutToken = NUT(esnutToken.nutToken());
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setFeeCollector(msg.sender);
+        
+        // Check to ensure uint96 is sufficient to store esNUT
+        require(type(uint96).max > nutToken.cap(), "LinearVesting: Insufficient resolution for tracking esNUT"); 
     }
 
     /**
@@ -159,7 +162,7 @@ contract LinearVesting is AccessControl {
      * @param duration The duration for which to lock the esNUT tokens
      * @param amount The amount of esNUT tokens to lock
      */
-    function lock(uint256 duration, uint256 amount) external {
+    function lock(uint64 duration, uint256 amount) external {
         require(esnutToken.balanceOf(msg.sender) >= amount, "LinearVesting: Insufficient esNUT balance");
         
         LockInfo storage lockInfo = lockSchedules[msg.sender];
@@ -170,11 +173,11 @@ contract LinearVesting is AccessControl {
             require(block.timestamp > lockInfo.lockedUntilTimestamp, "LinearVesting: Account Ineligible for Locking");
         }
 
-        uint64 newLockTime = uint64(block.timestamp + duration);
+        uint64 newLockTime = uint64(block.timestamp) + duration;
 
         require(newLockTime > lockInfo.lockedUntilTimestamp, "LinearVesting: Lock extension duration insufficient");
         
-        lockInfo.lockDuration = uint64(duration);
+        lockInfo.lockDuration = duration;
         lockInfo.lockedUntilTimestamp = newLockTime;
         lockInfo.esnutLocked = uint128(amount);
         
@@ -216,8 +219,8 @@ contract LinearVesting is AccessControl {
      * @param timestamp The future timestamp
      * @param esnutLocked The amount of esNUT tokens that will be locked until the timestamp
      */
-    function overrideLockEndTime(address target, uint256 timestamp, uint256 esnutLocked) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(timestamp > block.timestamp, "LinearVesting: Timestamp should be in the future");
+    function overrideLockEndTime(address target, uint64 timestamp, uint256 esnutLocked) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(uint256(timestamp) > block.timestamp, "LinearVesting: Timestamp should be in the future");
         
         LockInfo storage lockInfo = lockSchedules[target];
         lockInfo.lockDuration = 0;
