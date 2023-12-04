@@ -171,7 +171,7 @@ def test_scheduled_vesting():
     nut = NUT.at(esnut.nutToken());
         
     # Deploy vesting contracts
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
     
     # Grant UNLOCK role to scheduled_vesting
@@ -295,7 +295,7 @@ def test_linear_vesting():
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut = NUT.at(esnut.nutToken());
         
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     
     # Grant TRANSFER, UNLOCK role to linear_vesting
     esnut.grantRole(esnut.UNLOCK_ROLE(), linear_vesting, {"from": accounts[0]})
@@ -380,7 +380,7 @@ def test_scheduled_vesting_non_sequential_schedule():
     nut = NUT.at(esnut.nutToken());
     
     # Deploy vesting contracts
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
 
     # Try to set a non-sequential schedule for accounts[1]
@@ -400,7 +400,7 @@ def test_rescue_erc20():
     nut = NUT.at(esnut.nutToken());
     
     # Deploy vesting contracts
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
 
     # Mistakenly send esNUT to the ScheduledVesting contract
@@ -412,7 +412,7 @@ def test_rescue_erc20():
     assert esnut.balanceOf(scheduled_vesting.address) == 0
     assert esnut.balanceOf(accounts[0]) == 1e28 # original balance 
 
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
 
     # Mistakenly send esNUT to the LinearVesting contract
     esnut.transfer(linear_vesting.address, 1e25, {"from": accounts[0]})
@@ -429,7 +429,7 @@ def test_linear_vesting_additional():
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut = NUT.at(esnut.nutToken());
         
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     esnut.grantRole(esnut.UNLOCK_ROLE(), linear_vesting, {"from": accounts[0]})
     esnut.grantRole(esnut.TRANSFER_ROLE(), linear_vesting, {"from": accounts[0]})
 

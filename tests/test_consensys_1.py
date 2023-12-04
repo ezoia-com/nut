@@ -14,7 +14,7 @@ def test_consensys_1():
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut = NUT.at(esnut.nutToken());
     
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     
     # Grant TRANSFER, UNLOCK role to linear_vesting
     esnut.grantRole(esnut.UNLOCK_ROLE(), linear_vesting, {"from": accounts[0]})

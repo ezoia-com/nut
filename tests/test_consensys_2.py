@@ -15,7 +15,7 @@ def test_consensys_2():
     nut = NUT.at(esnut.nutToken());
     
     # Deploy vesting contracts
-    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    linear_vesting = LinearVesting.deploy(esnut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
     
     # Grant UNLOCK role to scheduled_vesting

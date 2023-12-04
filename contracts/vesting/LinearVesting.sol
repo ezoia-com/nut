@@ -70,9 +70,9 @@ contract LinearVesting is AccessControl {
      * @notice Constructor initializes the contract with esNUT token reference
      * @param _esnutToken Address of the esNUT token
      */
-    constructor(address _esnutToken, address _nutToken) {
+    constructor(address _esnutToken) {
         esnutToken = esNUT(_esnutToken);
-        nutToken = NUT(_nutToken);
+        nutToken = NUT(esnutToken.nutToken());
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         setFeeCollector(msg.sender);
     }
@@ -254,7 +254,7 @@ contract LinearVesting is AccessControl {
      * @param amount The amount of tokens to rescue
      */
     function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(tokenAddress != address(esnutToken), "LinearVesting: Cannot rescue esNUT");
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
 }
-
