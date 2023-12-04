@@ -2,6 +2,7 @@ import brownie
 import pytest
 import math
 from brownie import NUT, esNUT, accounts, ScheduledVesting, LinearVesting, chain, history
+from decimal import Decimal
 
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
@@ -177,8 +178,10 @@ def test_scheduled_vesting():
     esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-
-    scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
+    
+    # Deploy vesting contracts
+    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
     
     # Grant UNLOCK role to scheduled_vesting
     esnut.grantRole(esnut.UNLOCK_ROLE(), scheduled_vesting, {"from": accounts[0]})
@@ -186,16 +189,36 @@ def test_scheduled_vesting():
     # Cover case where schedule is missing
     with brownie.reverts("ScheduledVesting: Schedule length must be greater than 0"):
         scheduled_vesting.setSchedule(accounts[1], [])
-        
-    # Set a vesting schedule for accounts[1]
+    
+    # Define schedule
     schedule = [
-        (brownie.chain.time() + 60 * 60 * 24, 1e25),
-        (brownie.chain.time() + 60 * 60 * 48, 1e25)
+        (brownie.chain.time() + 60 * 60 * 24, int(Decimal("1e25"))),
+        (brownie.chain.time() + 60 * 60 * 48, int(Decimal("1e25")))
     ]
-    scheduled_vesting.setSchedule(accounts[1], schedule, {'from': accounts[0]})
+    
+    # Check case where ADMIN forgets to call overrideLockEndTime
+    with brownie.reverts("ScheduledVesting: Lock schedule not set"):
+        scheduled_vesting.setSchedule(accounts[1], schedule)
+    
+    # Call LinearVesting to lock esNUT for duration of schedule with incorrect lock count
+    linear_vesting.overrideLockEndTime(accounts[1], schedule[-1][0], sum(i[1] for i in schedule) - 1) 
+
+    # Check case where ADMIN configures Lock in LinearVesting incorrectly 
+    with brownie.reverts("ScheduledVesting: lockSchedule esNUT mismatch proposed schedule"):
+        scheduled_vesting.setSchedule(accounts[1], schedule)
+
+    # Call LinearVesting to lock esNUT for duration of schedule with incorrect lock count
+    linear_vesting.overrideLockEndTime(accounts[1], schedule[-1][0], sum(i[1] for i in schedule) )
+    
+    # Check case where ADMIN forgets to fund account
+    with brownie.reverts("ScheduledVesting: Insufficient esNUT to lock"):
+        scheduled_vesting.setSchedule(accounts[1], schedule)
     
     # Fund scheduled_vesting users
     esnut.transfer(accounts[1], sum( i[1] for i in schedule ), {"from": accounts[0]})
+
+    # Set a vesting schedule for accounts[1] 
+    scheduled_vesting.setSchedule(accounts[1], schedule)
     
     # Verify the vesting schedule is stored correctly
     for i, (timestamp, amount) in enumerate(schedule):
@@ -215,12 +238,16 @@ def test_scheduled_vesting():
         scheduled_vesting.vestTokens(accounts[1])
         assert nut.balanceOf(accounts[1]) - prevBalance == amount  # Check vested esNUT is unlocked back to user as NUT
 
-        # Modifying a Vesting Schedule
+    # Modifying a Vesting Schedule
     # Set a new vesting schedule for accounts[1]
     modified_schedule = [
-        (brownie.chain.time() + 60 * 60 * 24 * 3, 2e25),  # 3 days from now
-        (brownie.chain.time() + 60 * 60 * 24 * 6, 2e25)   # 6 days from now
+        (brownie.chain.time() + 60 * 60 * 24 * 3, int(Decimal(2e25)) ),  # 3 days from now
+        (brownie.chain.time() + 60 * 60 * 24 * 6, int(Decimal(2e25)) )   # 6 days from now
     ]
+
+    # Call LinearVesting to lock esNUT for duration of modified schedule
+    linear_vesting.overrideLockEndTime(accounts[1], modified_schedule[-1][0], sum(i[1] for i in modified_schedule)) 
+
 
     # Before setting a new schedule, we need to fund accounts[1] with the total esNUT for the modified schedule
     esnut.transfer(accounts[1], sum(i[1] for i in modified_schedule), {"from": accounts[0]})
@@ -250,8 +277,13 @@ def test_scheduled_vesting():
 
     # Fund accounts[2] with the total esNUT for the cancel_schedule
     esnut.transfer(accounts[2], sum(i[1] for i in cancel_schedule), {"from": accounts[0]})
-    scheduled_vesting.setSchedule(accounts[2], cancel_schedule, {'from': accounts[0]})
 
+    # Call LinearVesting to lock esNUT for duration of to_be_cancelled_schedule
+    linear_vesting.overrideLockEndTime(accounts[2], cancel_schedule[-1][0], sum(i[1] for i in cancel_schedule)) 
+
+    # Set Schedule 
+    scheduled_vesting.setSchedule(accounts[2], cancel_schedule, {'from': accounts[0]})
+    
     # Cancel the schedule
     scheduled_vesting.cancelSchedule(accounts[2], {"from": accounts[0]})
     
@@ -358,7 +390,9 @@ def test_scheduled_vesting_non_sequential_schedule():
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
 
-    scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
+    # Deploy vesting contracts
+    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
 
     # Try to set a non-sequential schedule for accounts[1]
     non_sequential_schedule = [
@@ -377,7 +411,9 @@ def test_rescue_erc20():
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
 
-    scheduled_vesting = ScheduledVesting.deploy(esnut.address, {'from': accounts[0]})
+    # Deploy vesting contracts
+    linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
+    scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
 
     # Mistakenly send esNUT to the ScheduledVesting contract
     esnut.transfer(scheduled_vesting.address, 1e25, {"from": accounts[0]})
