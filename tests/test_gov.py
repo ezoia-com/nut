@@ -39,7 +39,7 @@ def timelock(TimelockController, esnut, admin):
 # set up governor with timelock and give all timelock rights to it
 @pytest.fixture(scope="module", autouse=True)
 def governor(NutGovernor, admin, esnut, timelock):
-  governor = NutGovernor.deploy(esnut, timelock, 1, 10, 1e18, {"from": admin})
+  governor = NutGovernor.deploy(esnut, timelock, {"from": admin})
   timelock.grantRole(PROPOSER_ROLE, governor, {"from": admin})
   timelock.grantRole(CANCELLER_ROLE, governor, {"from": admin})
   timelock.grantRole(EXECUTOR_ROLE, governor, {"from": admin})
@@ -49,7 +49,6 @@ def governor(NutGovernor, admin, esnut, timelock):
 @pytest.fixture(autouse=True)
 def isolation(fn_isolation):
   pass
-
 
 def test_revoke_timelock_admin_rights(user, admin, timelock, governor, esnut):
   assert timelock.hasRole(TIMELOCK_ADMIN_ROLE , admin)

@@ -19,18 +19,15 @@ contract NutGovernor is
 {
   constructor(
     IVotes _token, 
-    TimelockController _timelock, 
-    uint256 votingDelay,
-    uint256 votingPeriod,
-    uint256 proposalThreshold
+    TimelockController _timelock
   ) 
     Governor("NutGovernor") 
-    GovernorSettings(1, 10, 1e18) 
+    GovernorSettings(3, 7, 1e18) // uint48 initialVotingDelay, uint32 initialVotingPeriod, uint256 initialProposalThreshold
     GovernorVotes(_token) 
     GovernorVotesQuorumFraction(4) 
     GovernorTimelockControl(_timelock) 
   {}
-
+  
   // The functions below are overrides required by Solidity.
 
   function state(
