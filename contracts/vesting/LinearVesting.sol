@@ -117,7 +117,7 @@ contract LinearVesting is AccessControl {
         require(vestingInfo.esnutDeposited > 0, "LinearVesting: No Vesting In Progress");
 
         // Return esNUT tokens to user
-        esnutToReturn = uint256(vestingInfo.esnutDeposited);
+        esnutToReturn = uint256(vestingInfo.esnutDeposited - vestingInfo.esnutCollected);
         esnutToken.transfer(msg.sender, esnutToReturn);
 
         delete vestingSchedules[msg.sender];
