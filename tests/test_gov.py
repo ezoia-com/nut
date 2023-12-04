@@ -19,14 +19,13 @@ def admin(a):
   yield a[0]
 
 @pytest.fixture(scope="module", autouse=True)
-def nut(NUT, admin):  
-  nut = NUT.deploy({"from": admin})
-  yield nut
+def nut(NUT, esnut):  
+  yield NUT.at(esnut.nutToken())
 
 @pytest.fixture(scope="module", autouse=True)
-def esnut(esNUT, nut, admin):
-  esnut = esNUT.deploy(nut, {"from": admin})
-  nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": admin})
+def esnut(NUT, esNUT, admin):
+  esnut = esNUT.deploy({"from": admin})
+  nut = NUT.at(esnut.nutToken()) 
   assert nut.hasRole(nut.MINTER_ROLE(), esnut)
   yield esnut
 

@@ -9,32 +9,30 @@ def isolation(fn_isolation):
     pass
 
 def test_deployment():
-    # Initial deployment of the NUT contract
-    nut = NUT.deploy({'from': accounts[0]})
-    assert nut.totalSupply() == 0, "Initial NUT supply is not 0"
-    assert nut.cap() == 1e28, "NUT cap is not 1e28"
-    assert nut.paused() == False, "NUT contract is paused upon deployment"
-    assert nut.hasRole(nut.DEFAULT_ADMIN_ROLE(), accounts[0]), "Deployer doesn't have DEFAULT_ADMIN_ROLE in NUT"
     
     # Initial deployment of the esNUT contract
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     assert esnut.totalSupply() == 0, "Initial esNUT supply is not 0"
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
     assert esnut.totalSupply() == 1e28, "Minted esNUT supply is not 1e28"
     assert esnut.tokenLocked() == True, "esNUT transfers are not locked upon deployment"
     assert esnut.hasRole(esnut.DEFAULT_ADMIN_ROLE(), accounts[0]), "Deployer doesn't have DEFAULT_ADMIN_ROLE in esNUT"
-    
+
+    # Initial deployment of the NUT contract
+    nut = NUT.at(esnut.nutToken())
+    assert nut.totalSupply() == 0, "Initial NUT supply is not 0"
+    assert nut.cap() == 1e28, "NUT cap is not 1e28"
+    assert nut.paused() == False, "NUT contract is paused upon deployment"
+    assert nut.hasRole(nut.DEFAULT_ADMIN_ROLE(), accounts[0]) == False, "Deployer has DEFAULT_ADMIN_ROLE in NUT"
+
     # Verify the relationship between NUT and esNUT
     assert esnut.nutToken() == nut.address, "esNUT's reference to NUT token is incorrect"
-
-    # Setup MINTER role for esnut
-    nut.grantRole(nut.MINTER_ROLE(), esnut.address)
     
     # Ensure that esNUT has the MINTER_ROLE in NUT
     assert nut.hasRole(nut.MINTER_ROLE(), esnut.address), "esNUT doesn't have MINTER_ROLE in NUT"
 
 def test_nut_basic_functionality():
-    # Deploy the NUT contract
+    # Deploy the NUT contract independently of esNUT
     nut = NUT.deploy({'from': accounts[0]})
     
     # Minting
@@ -76,10 +74,9 @@ def test_nut_basic_functionality():
 
 def test_esnut_basic_functionality():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
+    nut = NUT.at(esnut.nutToken());
     
     # Distribute some esNUT to accounts[1]
     initial_esnut = 1e26  # 100 esNUT tokens
@@ -98,7 +95,7 @@ def test_esnut_basic_functionality():
     with brownie.reverts("esNUT: Neither sender nor recipient has TRANSFER_ROLE"):
         esnut.transfer(accounts[2], 1e25, {'from': accounts[1]})  # try to transfer 10 esNUT tokens
         
-    # Enable transfers by DEFAULT_ADMIN_ROLE
+    # Enable transfers by esnut.DEFAULT_ADMIN_ROLE
     esnut.setTokenLock(False, {'from': accounts[0]})
     esnut.transfer(accounts[2], 1e25, {'from': accounts[1]})
     assert esnut.balanceOf(accounts[2]) == 1e25, "Transfer of esNUT failed for accounts[2]"
@@ -111,11 +108,10 @@ def test_esnut_basic_functionality():
 
 def test_emergency_pause():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-    
+    nut = NUT.at(esnut.nutToken());
+        
     # Grant PAUSER role to a specific account for simulation purposes
     pauser_account = accounts[1]
     nut.grantRole(nut.PAUSER_ROLE(), pauser_account, {"from": accounts[0]})
@@ -164,21 +160,16 @@ def test_emergency_pause():
     esnut.transfer(accounts[3], transfer_amount, {'from': accounts[1]})
     assert esnut.balanceOf(accounts[3]) == initial_esnut + transfer_amount, "Transfer failed for accounts[3] in esNUT"
     
-    # DEFAULT_ADMIN_ROLE should be able to unpause even if rogue PAUSER pauses
-    nut.pause({'from': pauser_account})
-    nut.unpause({'from': accounts[0]})
-    
-    # DEFAULT_ADMIN_ROLE should be able to rescind PAUSER role
+    # ADMIN_ROLE should be able to rescind PAUSER role
     nut.revokeRole(nut.PAUSER_ROLE(), pauser_account, {'from': accounts[0]})
     assert not nut.hasRole(nut.PAUSER_ROLE(), pauser_account), "pauser_account still has PAUSER_ROLE in NUT after revocation"
 
 def test_scheduled_vesting():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-    
+    nut = NUT.at(esnut.nutToken());
+        
     # Deploy vesting contracts
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
@@ -300,11 +291,10 @@ def test_scheduled_vesting():
 
 def test_linear_vesting():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-    
+    nut = NUT.at(esnut.nutToken());
+        
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     
     # Grant TRANSFER, UNLOCK role to linear_vesting
@@ -385,11 +375,10 @@ def test_linear_vesting():
     
 def test_scheduled_vesting_non_sequential_schedule():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-
+    nut = NUT.at(esnut.nutToken());
+    
     # Deploy vesting contracts
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
@@ -406,11 +395,10 @@ def test_scheduled_vesting_non_sequential_schedule():
 
 def test_rescue_erc20():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-
+    nut = NUT.at(esnut.nutToken());
+    
     # Deploy vesting contracts
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     scheduled_vesting = ScheduledVesting.deploy(esnut.address, linear_vesting, {'from': accounts[0]})
@@ -437,11 +425,10 @@ def test_rescue_erc20():
 
 def test_linear_vesting_additional():
     # Setup common variables
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
-    
+    nut = NUT.at(esnut.nutToken());
+        
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     esnut.grantRole(esnut.UNLOCK_ROLE(), linear_vesting, {"from": accounts[0]})
     esnut.grantRole(esnut.TRANSFER_ROLE(), linear_vesting, {"from": accounts[0]})
@@ -508,6 +495,7 @@ def test_linear_vesting_additional():
     esnut.transfer(accounts[8], 1e20, {"from": accounts[0]})
     esnut.approve(linear_vesting, 1e20, {'from': accounts[8]})
     linear_vesting.startVesting(1e20, {'from': accounts[8]})
+    chain.mine(timestamp = chain[-1].timestamp) # No time elapsed
     linear_vesting.cancelVesting({'from': accounts[8]})
     assert esnut.balanceOf(accounts[8]) == 1e20, "cancelVesting failed"
 

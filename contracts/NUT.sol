@@ -15,14 +15,22 @@ import "../node_modules/@openzeppelin/contracts/token/ERC20/presets/ERC20PresetM
 contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
     using SafeERC20 for ERC20;
 
+    /// @notice Access role for addresses who are allowed to perform ERC20 rescue  
+    bytes32 public constant RESCUE_ROLE = keccak256("RESCUE_ROLE");
+
+    /// @notice Access role for addresses who are allowed to grant/revoke RESCUE_ROLE and PAUSER_ROLE   
+    bytes32 public constant ADMIN_ROLE = keccak256("RESCUE_ADMIN_ROLE");
+   
     /**
      * @notice Constructs the NUT token contract.
-     * Grants the DEFAULT_ADMIN_ROLE to the deployer.
+     * Assigns DEFAULT_ADMIN_ROLE and sets up ADMIN_ROLE
      */
     constructor() 
         ERC20PresetMinterPauser("Thetanuts", "NUT") 
         ERC20Capped(1e28)
     {
+        _setRoleAdmin(RESCUE_ROLE, ADMIN_ROLE);
+        _setRoleAdmin(PAUSER_ROLE, ADMIN_ROLE);
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
     
@@ -63,7 +71,7 @@ contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
      * @param target The address to which the rescued tokens will be sent.
      * @param amount The amount of tokens to be rescued and sent.
      */
-    function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function rescueERC20(address tokenAddress, address target, uint256 amount) external onlyRole(RESCUE_ROLE) {
         ERC20(tokenAddress).safeTransfer(target, amount);
     }
 }

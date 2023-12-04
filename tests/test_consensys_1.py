@@ -10,10 +10,9 @@ def isolation(fn_isolation):
 # 5.1 LinearVesting - Incorrect Logic to Return Funds While Vesting Cancellation, Allows Draining of Contract Funds 
 def test_consensys_1():
     # Deploy the NUT and esNUT contracts
-    nut = NUT.deploy({'from': accounts[0]})
-    esnut = esNUT.deploy(nut.address, {'from': accounts[0]})
+    esnut = esNUT.deploy({'from': accounts[0]})
     esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
-    nut.grantRole(nut.MINTER_ROLE(), esnut, {"from": accounts[0]})
+    nut = NUT.at(esnut.nutToken());
     
     linear_vesting = LinearVesting.deploy(esnut.address, nut.address, {'from': accounts[0]})
     

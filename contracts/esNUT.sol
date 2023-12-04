@@ -31,16 +31,18 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
 
     /**
      * @notice Constructor for the esNUT token
-     * @param _nutToken Address of the NUT token
      */
-    constructor(address _nutToken)
+    constructor()
         ERC20("NUT Governance Token", "esNUT")
         ERC20Permit("NUT Governance Token")
     {
-        nutToken = NUT(_nutToken);
         tokenLocked = true;  // Transfer is locked by default
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _setupRole(TRANSFER_ROLE, msg.sender);
+        nutToken = new NUT();
+        nutToken.grantRole(nutToken.ADMIN_ROLE(), msg.sender);
+        nutToken.grantRole(nutToken.MINTER_ROLE(), address(this));
+        nutToken.renounceRole(nutToken.DEFAULT_ADMIN_ROLE(), address(this));
     }
 
     // Overrides for ERC20Votes
