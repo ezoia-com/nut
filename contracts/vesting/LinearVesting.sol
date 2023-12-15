@@ -121,7 +121,7 @@ contract LinearVesting is AccessControl {
 
         // Return esNUT tokens to user
         esnutToReturn = uint256(vestingInfo.esnutDeposited - vestingInfo.esnutCollected);
-        esnutToken.safeTransfer(msg.sender, esnutToReturn);
+        esnutToken.transfer(msg.sender, esnutToReturn);
 
         delete vestingSchedules[msg.sender];
                 
@@ -152,7 +152,7 @@ contract LinearVesting is AccessControl {
         }
 
         esnutToken.unlock(address(this), claimableAmount);
-        nutToken.safeTransfer(msg.sender, claimableAmount);
+        nutToken.transfer(msg.sender, claimableAmount);
                 
         emit LinearUnlocked(msg.sender, claimableAmount);
     }
@@ -205,11 +205,11 @@ contract LinearVesting is AccessControl {
         refundAmount = esnutRemaining - penaltyAmount;
     
         esnutToken.unlock(address(this), refundAmount);    
-        nutToken.safeTransfer(msg.sender, refundAmount);
+        nutToken.transfer(msg.sender, refundAmount);
         
         delete vestingSchedules[msg.sender];
         
-        esnutToken.safeTansfer(feeCollector, penaltyAmount);
+        esnutToken.transfer(feeCollector, penaltyAmount);
         
         emit EarlyLinearUnlock(msg.sender, refundAmount, penaltyAmount);
     }
