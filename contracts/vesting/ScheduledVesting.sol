@@ -58,6 +58,7 @@ contract ScheduledVesting is AccessControl {
         (uint64 lockDuration, uint64 lockedUntilTimestamp, uint128 esnutLocked) = linearVesting.lockSchedules(account);
         
         require(lockedUntilTimestamp > 0, "ScheduledVesting: Lock schedule not set");
+        require(lockedUntilTimestamp >= newSchedule[newSchedule.length - 1].timestampAvailable, "ScheduledVesting: Lock schedule not long enough");
         require(uint256(lockedUntilTimestamp) > block.timestamp, "ScheduledVesting: Lock schedule already expired");
         require(lockDuration == 0, "ScheduledVesting: Lock schedule in LinearVesting not set via by ADMIN");
         require(uint256(esnutLocked) == totalAmount, "ScheduledVesting: lockSchedule esNUT mismatch proposed schedule");

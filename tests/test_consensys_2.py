@@ -36,9 +36,15 @@ def test_consensys_2():
     with brownie.reverts("ScheduledVesting: Lock schedule not set"):
         scheduled_vesting.setSchedule(accounts[1], schedule)
     
+    # Call LinearVesting to lock esNUT for duration of schedule with incorrect end lock time
+    linear_vesting.overrideLockEndTime(accounts[1], schedule[-1][0] - 1, sum(i[1] for i in schedule)) 
+
+    # Check case where ADMIN calls with a wrong end locktime
+    with brownie.reverts("ScheduledVesting: Lock schedule not long enough"):
+        scheduled_vesting.setSchedule(accounts[1], schedule)
+
     # Call LinearVesting to lock esNUT for duration of schedule with incorrect lock count
     linear_vesting.overrideLockEndTime(accounts[1], schedule[-1][0], sum(i[1] for i in schedule) + 1) 
-
 
     # Check case where ADMIN sets expiry but doesn't set schedule again until much later
     chain.snapshot()
