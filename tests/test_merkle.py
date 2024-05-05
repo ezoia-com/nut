@@ -7,20 +7,19 @@ import json, brownie, pytest
 def test_basic_deposit_and_withdrawal(a, NUT, MerkleDistributor):
   FN = "scripts/list.txt"
   nuts = NUT.deploy({"from": a[0]})
-  nuts.mint(a[0], 41919e18, {"from": a[0]})
   proofTree = json.load(open(FN + ".proofTree.json", "r"))
   m = MerkleDistributor.deploy(nuts, proofTree[-1][0], {"from": a[0]})
-  nuts.transfer(m, 100e18, {"from": a[0]})
+  nuts.mint(m, 100e18, {"from": a[0]})
   proofs = json.load(open(FN + ".proof.json", "r"))
   l = open(FN, "r").read().split("\n")
   for i in range(len(proofs)):
     addr, amt = l[i].split(",",2)
-    m.claim.call(i, addr, int(amt), proofs[i], {"from": a[0]})
+    m.claim(i, addr, int(amt), proofs[i], {"from": a[0]})
     print("m.claim(%i, '%s', %s, %s)"%(i, addr, amt, proofs[i]))
   for i in range(len(proofs)):
     addr, amt = l[i].split(",",2)
     with brownie.reverts("MerkleDistributor: Drop already claimed."): tx = m.claim(i, addr, int(amt), proofs[i], {"from": a[0]})
-    if nuts.balanceOf(addr) != int(amt): raise Exception("nuts mismatch")
+    if nuts.balanceOf(addr) != int(amt): raise Exception("nuts mismatch %i vs %i"%(nuts.balanceOf(addr), int(amt)))
     else: print("Account %i has received correct number of tokens"%(i))
 
 """
