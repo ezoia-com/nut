@@ -35,8 +35,8 @@ proofs = []
 
 for i in range(len(l)):
   addr, amt = l[i].split(",", 2)
-  print(i, addr, amt)
-  print("Leaf: ", hexTree[0][i])
+  #print(i, addr, amt)
+  #print("Leaf: ", hexTree[0][i])
   tmp_i = i
   proof = []
   for j in range(0, len(hexTree) - 1):
@@ -44,6 +44,6 @@ for i in range(len(l)):
     else:              proof.append(hexTree[j][ tmp_i - 1])
     tmp_i = int(tmp_i / 2)
   proofs.append(proof)
-  print(proof)
+  #print(proof)
 
 json.dump( proofs, open(FN + ".proof.json","w"))

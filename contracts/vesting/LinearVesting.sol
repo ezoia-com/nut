@@ -175,7 +175,13 @@ contract LinearVesting is AccessControl {
 
         uint64 newLockTime = uint64(block.timestamp) + duration;
 
+        // Only allow user to extend and increase lock; otherwise, user can cancel lock
         require(newLockTime > lockInfo.lockedUntilTimestamp, "LinearVesting: Lock extension duration insufficient");
+        
+        // If existing lock is still valid, only allow user to lock a larger sum that existing, otherwise user can cancel lock by setting 0 
+        if (lockInfo.lockedUntilTimestamp < block.timeStamp) {
+          require(amount > lockInfo.esnutLocked, "LinearVesting: Lock extension duration insufficient");
+        }
         
         lockInfo.lockDuration = duration;
         lockInfo.lockedUntilTimestamp = newLockTime;

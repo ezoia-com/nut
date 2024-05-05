@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: None
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -35,8 +35,10 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
      * @notice Constructor for the esNUT token
      */
     constructor()
-        ERC20("NUT Governance Token", "esNUT")
-        ERC20Permit("NUT Governance Token")
+        ERC20("Cashew Governance Token", "esCASHEW")
+        ERC20Permit("Cashew Governance Token")
+        // ERC20("NUT Governance Token", "esNUT")
+        // ERC20Permit("NUT Governance Token")
     {
         tokenLocked = true;  // Transfer is locked by default
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: None
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "../node_modules/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,7 +26,8 @@ contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
      * Assigns DEFAULT_ADMIN_ROLE and sets up ADMIN_ROLE
      */
     constructor() 
-        ERC20PresetMinterPauser("Thetanuts", "NUT") 
+        ERC20PresetMinterPauser("Cashew", "CASHEW")
+        // ERC20PresetMinterPauser("Thetanuts", "NUT") 
         ERC20Capped(1e28)
     {
         _setRoleAdmin(RESCUE_ROLE, ADMIN_ROLE);
