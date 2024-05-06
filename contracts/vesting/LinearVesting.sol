@@ -92,6 +92,8 @@ contract LinearVesting is AccessControl {
         // Claim any previously vested tokens
         claimVestedTokens();
 
+        // Reset esnutCollected, which is used for tracking linear vesting from startTimestamp
+        vestingInfo.esnutCollected = 0;
         vestingInfo.startTimestamp = uint64(block.timestamp);
         vestingInfo.esnutDeposited += uint96(amount);
 
