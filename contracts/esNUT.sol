@@ -9,10 +9,10 @@ import "../node_modules/@openzeppelin/contracts/access/AccessControlEnumerable.s
 import "./NUT.sol";
 
 /**
- * @title esNUT Token Contract
- * @dev esNUT is an ERC20 token with voting capabilities and extended access controls.
- * It represents a locked version of the NUT token, with functionalities to unlock and lock.
- * It maintains an invariant: total supply of esNUT + total supply of NUT = 10 billion.
+ * @title Vote Escrowed Thetanuts Finance Governance Token (veNUTS) Token Contract
+ * @dev veNUTS is an ERC20 token with voting capabilities and extended access controls.
+ * It represents a locked version of the NUTS token, with functionalities to unlock and lock.
+ * It maintains an invariant: total supply of veNUTS + total supply of NUTS = 10 billion.
  */
 contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     using SafeERC20 for ERC20;
@@ -23,22 +23,20 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     // Indicates whether the token transfers are locked or unlocked
     bool public tokenLocked;
  
-    /// @notice Access role for addresses who are allowed to receive/transfer esNUT 
+    /// @notice Access role for addresses who are allowed to receive/transfer veNUTS 
     bytes32 public constant TRANSFER_ROLE = keccak256("TRANSFER_ROLE");
 
-    /// @notice Access role for addresses who are allowed to unlock esNUT 
+    /// @notice Access role for addresses who are allowed to unlock veNUTS 
     bytes32 public constant UNLOCK_ROLE = keccak256("UNLOCK_ROLE");
 
     event TokenLock(bool locked);
 
     /**
-     * @notice Constructor for the esNUT token
+     * @notice Constructor for the veNUTS token
      */
     constructor()
-        ERC20("Cashew Governance Token", "esCASHEW")
-        ERC20Permit("Cashew Governance Token")
-        // ERC20("NUT Governance Token", "esNUT")
-        // ERC20Permit("NUT Governance Token")
+        ERC20("Vote Escrowed Thetanuts Finance Governance Token", "veNUTS")
+        ERC20Permit("Vote Escrowed Thetanuts Finance Governance Token")
     {
         tokenLocked = true;  // Transfer is locked by default
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -82,48 +80,48 @@ contract esNUT is ERC20, ERC20Permit, ERC20Votes, AccessControlEnumerable {
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override {
         // Check for regular transfers, and verify tokenLocked and pausing state
         if (from != address(0) && to != address(0) && tokenLocked) {
-            require(hasRole(TRANSFER_ROLE, from) || hasRole(TRANSFER_ROLE, to), "esNUT: Neither sender nor recipient has TRANSFER_ROLE");
+            require(hasRole(TRANSFER_ROLE, from) || hasRole(TRANSFER_ROLE, to), "veUTS: Neither sender nor recipient has TRANSFER_ROLE");
         }
-        require(nutToken.paused() == false, "Paused");  // If NUT token is paused, esNUT should also be paused
+        require(nutToken.paused() == false, "Paused");  // If NUT token is paused, veNUTS should also be paused
     }
 
-    // Modifier to ensure the invariant between esNUT and NUT total supplies
+    // Modifier to ensure the invariant between veNUTS and NUT total supplies
     modifier checkInvariantAfter {
         _;
-        require(nutToken.totalSupply() + totalSupply() <= nutToken.cap(), "esNUT: NUT + esNUT invariant breached");
+        require(nutToken.totalSupply() + totalSupply() <= nutToken.cap(), "veNUTS: NUT + veNUTS invariant breached");
     }
 
     /**
-     * @notice Allows admin role accounts to mint esNUT - this is likely deployer and eventually governance
+     * @notice Allows admin role accounts to mint veNUTS - this is likely deployer and eventually governance
      * @param to Address to mint to
-     * @param amount Amount of esNUT to mint
+     * @param amount Amount of veNUTS to mint
      */   
     function mint(address to, uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) checkInvariantAfter {        
         _mint(to, amount);
     }
     
     /**
-     * @notice Allows admin role accounts to burn esNUT - this is likely deployer and eventually governance
-     * @param amount Amount of esNUT to burn
+     * @notice Allows admin role accounts to burn veNUTS - this is likely deployer and eventually governance
+     * @param amount Amount of veNUTS to burn
      */
     function burn(uint256 amount) public onlyRole(DEFAULT_ADMIN_ROLE) {
         _burn(msg.sender, amount);
     }
     
     /**
-     * @notice Allows specified accounts to unlock esNUT into NUT
-     * @param account Address of the account unlocking their esNUT
-     * @param unlockAmount Amount of esNUT to unlock
+     * @notice Allows specified accounts to unlock veNUTS into NUTS
+     * @param account Address of the account unlocking their veNUTS
+     * @param unlockAmount Amount of veNUTS to unlock
      */
     function unlock(address account, uint256 unlockAmount) public onlyRole(UNLOCK_ROLE) checkInvariantAfter {
-        require(balanceOf(account) >= unlockAmount, "esNUT: Insufficient Balance to unlock");
+        require(balanceOf(account) >= unlockAmount, "veNUTS: Insufficient Balance to unlock");
         _burn(account, unlockAmount);
         nutToken.mint(account, unlockAmount);
     }
 
     /**
-     * @notice Locks NUT to mint equivalent esNUT for the caller
-     * @param amount Amount of NUT to lock
+     * @notice Locks NUT to mint equivalent veNUTS for the caller
+     * @param amount Amount of NUTS to lock
      */
     function lock(uint256 amount) public checkInvariantAfter {
         nutToken.burn(msg.sender, amount);

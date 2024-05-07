@@ -7,10 +7,10 @@ import "../node_modules/@openzeppelin/contracts/token/ERC20/extensions/ERC20Capp
 import "../node_modules/@openzeppelin/contracts/token/ERC20/presets/ERC20PresetMinterPauser.sol";
 
 /**
- * @title NUT Token Contract
- * @notice This contract manages the NUT token, a standard ERC20 token with capabilities for minting and pausing.
- * The maximum supply is capped at 1e28 units, which represents 10 billion NUT tokens with 18 decimals.
- * The esNUT token contract is paired to this contract, and requires the MINTER role from NUT to allow minting and burning.
+ * @title Thetanuts Finance Governance Token (NUTS) Token Contract
+ * @notice This contract manages the NUTS token, a standard ERC20 token with capabilities for minting and pausing.
+ * The maximum supply is capped at 1e28 units, which represents 10 billion NUTS tokens with 18 decimals.
+ * The veNUTS token contract is paired to this contract, and requires the MINTER role from NUTS to allow minting and burning.
  */
 contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
     using SafeERC20 for ERC20;
@@ -22,12 +22,11 @@ contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
     bytes32 public constant ADMIN_ROLE = keccak256("RESCUE_ADMIN_ROLE");
    
     /**
-     * @notice Constructs the NUT token contract.
+     * @notice Constructs the NUTS token contract.
      * Assigns DEFAULT_ADMIN_ROLE and sets up ADMIN_ROLE
      */
     constructor() 
-        ERC20PresetMinterPauser("Cashew", "CASHEW")
-        // ERC20PresetMinterPauser("Thetanuts", "NUT") 
+        ERC20PresetMinterPauser("Thetanuts Finance Governance Token", "NUTS") 
         ERC20Capped(1e28)
     {
         _setRoleAdmin(RESCUE_ROLE, ADMIN_ROLE);
@@ -58,9 +57,11 @@ contract NUT is ERC20, ERC20PresetMinterPauser, ERC20Capped {
     }
     
     /**
-     * @notice Burns an amount of NUT tokens from the specified account.
-     * @param account The address of the account from which NUT tokens will be burned.
-     * @param amount The amount of NUT tokens to burn.
+     * @notice Burns an amount of NUTS tokens from the specified account.
+     *         This can only be done by the veNUTS contract, and can only be initiated by account holder
+     *         This turns NUTS into veNUTS, and ensures (NUTS + veNUTS) totalSupply is capped
+     * @param account The address of the account from which NUTS tokens will be burned.
+     * @param amount The amount of NUTS tokens to burn.
      */
     function burn(address account, uint256 amount) onlyRole(MINTER_ROLE) public {
         _burn(account, amount);
