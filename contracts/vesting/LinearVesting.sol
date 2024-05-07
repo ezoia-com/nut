@@ -81,8 +81,14 @@ contract LinearVesting is AccessControl {
     }
 
     /**
-     * @notice Allows a user to start vesting their esNUT tokens
-     * @param amount Amount of esNUT tokens the user wants to vest
+     * @notice Initiates the vesting of esNUT tokens into NUT tokens over the vesting duration.
+     *         This function transfers the specified amount of esNUT tokens from the user's wallet to the contract.
+     *         It ensures that any esNUT tokens that are currently locked remain in the user's wallet and are not transferred for vesting.
+     *         If there is an active lock on the user's account, the function performs a balance check after the transfer to confirm that the user still holds at least the amount of esNUT tokens specified as locked, thus safeguarding the integrity of locked tokens.
+     * @param amount The amount of esNUT tokens the user wishes to vest.
+     * @dev Transfers 'amount' of esNUT tokens from the user to the contract. If there is an active lock on the user's account, it checks post-transfer that the user's balance is sufficient to meet the lock conditions.
+     *      This is crucial to ensure that locked tokens are not vested.
+     *      The function resets the collected esNUT tokens to zero and updates the start timestamp for the new vesting period.
      */
     function startVesting(uint256 amount) external {
         require(esnutToken.balanceOf(msg.sender) >= amount, "LinearVesting: Insufficient esNUT balance");        
@@ -93,9 +99,10 @@ contract LinearVesting is AccessControl {
         claimVestedTokens();
 
         // Reset esnutCollected, which is used for tracking linear vesting from startTimestamp
-        vestingInfo.esnutCollected = 0;
         vestingInfo.startTimestamp = uint64(block.timestamp);
         vestingInfo.esnutDeposited += uint96(amount);
+        vestingInfo.esnutDeposited -= vestingInfo.esnutCollected;
+        vestingInfo.esnutCollected = 0;
 
         // Transfer esNUT tokens from user to this contract for vesting
         esnutToken.transferFrom(msg.sender, address(this), amount);
