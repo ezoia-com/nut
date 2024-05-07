@@ -68,3 +68,45 @@ def test_vesting_fix():
 
     # Early withdraw penalty should be in the fee collector
     assert esnut.balanceOf(linearVesting.feeCollector()) == penalty_amount
+
+
+def test_two_full_vestings_90_days_apart():
+
+    # Deploy esNUT contracts
+    esnut = esNUT.deploy({'from': accounts[0]})
+    esnut.mint(accounts[0], 1e28, {"from": accounts[0]})
+    nut = NUT.at(esnut.nutToken());
+
+    linearVesting = LinearVesting.deploy(esnut, {"from": accounts[0]})
+    
+    esnut.grantRole(esnut.UNLOCK_ROLE(), linearVesting, {"from": accounts[0]})
+    esnut.grantRole(esnut.TRANSFER_ROLE(), linearVesting, {"from": accounts[0]})
+    
+    linearVesting.setFeeCollector(accounts[4], {"from": accounts[0]})
+
+    # Test case: User calls startVesting twice, 90 days apart
+    esnut.transfer(accounts[3], 2e26, {"from": accounts[0]})  # Transfer 2e26 esNUT to accounts[3]
+    esnut.approve(linearVesting, 2e26, {'from': accounts[3]})
+
+    # First vesting
+    linearVesting.startVesting(1e26, {'from': accounts[3]})
+
+    # Advance time by 90 days
+    chain.mine(timestamp=linearVesting.vestingSchedules(accounts[3])[0] + 60 * 60 * 24 * 90)
+
+    # Claim vested tokens from first vesting
+    linearVesting.claimVestedTokens({'from': accounts[3]})
+
+    # Second vesting
+    linearVesting.startVesting(1e26, {'from': accounts[3]})
+
+    # Advance time by another 90 days
+    chain.mine(timestamp=linearVesting.vestingSchedules(accounts[3])[0] + 60 * 60 * 24 * 90)
+
+    # Claim vested tokens from second vesting
+    linearVesting.claimVestedTokens({'from': accounts[3]})
+    
+    # Check balances
+    assert esnut.balanceOf(linearVesting) == 0
+    assert esnut.balanceOf(accounts[3]) == 0
+    assert nut.balanceOf(accounts[3]) == 2e26  # All esNUT should be converted to NUT without penalty
